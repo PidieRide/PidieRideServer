@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "setupdb": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
   "start": "node app.js",
   "dev": "nodemon app.js"
   },
