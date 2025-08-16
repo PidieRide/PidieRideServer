@@ -82,11 +82,11 @@ class ControllerCustomer {
         try {
             const { oldPassword, newPassword } = req.body;
             const customer = await Customer.findByPk(req.user.id);
-            if (!bcrypt.comparePassword(oldPassword, customer.password)) {
+            if (!(await bcrypt.compareHash(oldPassword, customer.password))) {
                 return res.status(400).json({ message: "Wrong password" });
             }
             await Customer.update(
-                { password: bcrypt.hashPassword(newPassword) },
+                { password: await bcrypt.hashPassword(newPassword) },
                 { where: { id: req.user.id } }
             );
             res.json({ message: "Password changed" });

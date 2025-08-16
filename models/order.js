@@ -20,7 +20,15 @@ module.exports = (sequelize, DataTypes) => {
     status: DataTypes.STRING,
     totalPrice: DataTypes.DECIMAL,
     deliveryAddress: DataTypes.STRING,
-    paymentMethod: DataTypes.STRING
+    paymentMethod: DataTypes.STRING,
+    latitude: {
+      type: DataTypes.DECIMAL(10, 8), // akurat sampai cm
+      allowNull: true
+    },
+    longitude: {
+      type: DataTypes.DECIMAL(11, 8), // akurat sampai cm
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'Order',
