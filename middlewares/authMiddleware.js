@@ -2,6 +2,7 @@ const jwtHelper = require("../helpers/jwt");
 const { Customer, Driver, Partner, Admin } = require("../models");
 
 module.exports = async function authMiddleware(req, res, next) {
+    console.log("masuk auth", req.headers);
     try {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -11,8 +12,8 @@ module.exports = async function authMiddleware(req, res, next) {
         }
 
         const token = authHeader.split(" ")[1];
-        const payload = jwtHelper.verifyToken(token); // verifyToken dari helpers/jwt.js
-
+        const payload = await jwtHelper.decodeToken(token); // verifyToken dari helpers/jwt.js
+        console.log("payload: ", payload);
         if (!payload || !payload.id || !payload.role) {
             return res
                 .status(401)
