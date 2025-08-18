@@ -20,6 +20,9 @@ app.use(routes);
 app.get("/", (req, res) => {
     res.send("Server is running!");
 });
+app.get("/health", (req, res) => {
+    res.status(200).send("OK");
+});
 
 // ✅ Cek koneksi ke DB terlebih dahulu
 db.sequelize
