@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-  "setupdb": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
-  "build": "echo \"No build step\"",
-  "start": "node app.js",
-  "dev": "nodemon app.js"
+    "setupdb": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
+    "build": "echo \"No build step\"",
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "keywords": [],
   "author": "",
