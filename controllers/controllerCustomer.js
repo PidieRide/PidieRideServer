@@ -20,6 +20,7 @@ class ControllerCustomer {
                 email,
                 password,
                 phone,
+                isDeleted: false,
             });
             res.status(201).json({ message: "Register success", customer });
         } catch (err) {
@@ -30,7 +31,9 @@ class ControllerCustomer {
     static async login(req, res, next) {
         try {
             const { email, password } = req.body;
-            const customer = await Customer.findOne({ where: { email } });
+            const customer = await Customer.findOne({
+                where: { email, isDeleted: false },
+            });
             if (
                 !customer ||
                 !(await bcrypt.compareHash(password, customer.password))
@@ -60,7 +63,8 @@ class ControllerCustomer {
     static async getProfile(req, res, next) {
         console.log("masuk");
         try {
-            const profile = await Customer.findByPk(req.user.id, {
+            const profile = await Customer.findOne({
+                where: { id: req.user.id, isDeleted: false },
                 attributes: { exclude: ["password"] },
             });
             res.json(profile);
@@ -104,6 +108,29 @@ class ControllerCustomer {
                 { where: { id: req.user.id } }
             );
             res.json({ message: "Photo updated", photoUrl: result.secure_url });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    static async deleteAccount(req, res, next) {
+        try {
+            const customer = await Customer.findOne({
+                where: { id: req.user.id, isDeleted: false },
+            });
+
+            if (!customer) {
+                return res
+                    .status(404)
+                    .json({ message: "Customer not found or already deleted" });
+            }
+
+            await Customer.update(
+                { isDeleted: true },
+                { where: { id: req.user.id } }
+            );
+
+            res.json({ message: "Account deleted (soft delete)" });
         } catch (err) {
             next(err);
         }

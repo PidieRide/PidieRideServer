@@ -10,6 +10,7 @@ router.post('/register', ControllerCustomer.register);
 router.post('/login', ControllerCustomer.login);
 router.post('/logout', authMiddleware, ControllerCustomer.logout);
 router.post('/refresh-token', authMiddleware, ControllerCustomer.refreshToken);
+router.post('/delete-account', authMiddleware, ControllerCustomer.deleteAccount);
 
 router.get('/profile', authMiddleware, ControllerCustomer.getProfile);
 router.put('/profile', authMiddleware, ControllerCustomer.updateProfile);
