@@ -1,4 +1,4 @@
-const { Admin, Customer, Driver, Partner, Order, Delivery } = require('../models');
+const { Admin, Customer, Driver, Partner, Order, Delivery, Constant } = require('../models');
 const bcrypt = require('../helpers/bcrypt');
 const jwt = require('../helpers/jwt');
 
@@ -80,6 +80,77 @@ class ControllerAdmin {
         try {
             const rides = await Delivery.findAll();
             res.json(rides);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+     // === CRUD Constant ===
+
+    // Create Constant
+    static async createConstant(req, res, next) {
+        try {
+            const { type, pricePerKM, serviceFee } = req.body;
+            const constant = await Constant.create({ type, pricePerKM, serviceFee });
+            res.status(201).json({ message: "Constant created", constant });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // Read All Constants
+    static async listConstants(req, res, next) {
+        try {
+            const constants = await Constant.findAll();
+            res.json(constants);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // Read One Constant by ID
+    static async getConstant(req, res, next) {
+        try {
+            const { id } = req.params;
+            const constant = await Constant.findByPk(id);
+            if (!constant) {
+                return res.status(404).json({ message: "Constant not found" });
+            }
+            res.json(constant);
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // Update Constant
+    static async updateConstant(req, res, next) {
+        try {
+            const { id } = req.params;
+            const { type, pricePerKM, serviceFee } = req.body;
+
+            const constant = await Constant.findByPk(id);
+            if (!constant) {
+                return res.status(404).json({ message: "Constant not found" });
+            }
+
+            await constant.update({ type, pricePerKM, serviceFee });
+            res.json({ message: "Constant updated", constant });
+        } catch (err) {
+            next(err);
+        }
+    }
+
+    // Delete Constant
+    static async deleteConstant(req, res, next) {
+        try {
+            const { id } = req.params;
+            const constant = await Constant.findByPk(id);
+            if (!constant) {
+                return res.status(404).json({ message: "Constant not found" });
+            }
+
+            await constant.destroy();
+            res.json({ message: "Constant deleted" });
         } catch (err) {
             next(err);
         }

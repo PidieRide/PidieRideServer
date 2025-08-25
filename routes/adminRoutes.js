@@ -17,4 +17,11 @@ router.get("/partners", authMiddleware, ControllerAdmin.listPartners);
 router.get("/orders", authMiddleware, ControllerAdmin.listOrders);
 router.get("/rides", authMiddleware, ControllerAdmin.listRides);
 
+// Constants CRUD (hanya bisa diakses admin yang login)
+router.post("/constants", authMiddleware, ControllerAdmin.createConstant);
+router.get("/constants", authMiddleware, ControllerAdmin.listConstants);
+router.get("/constants/:id", authMiddleware, ControllerAdmin.getConstant);
+router.put("/constants/:id", authMiddleware, ControllerAdmin.updateConstant);
+router.delete("/constants/:id", authMiddleware, ControllerAdmin.deleteConstant);
+
 module.exports = router;
