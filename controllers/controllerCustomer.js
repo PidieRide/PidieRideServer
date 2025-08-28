@@ -9,12 +9,24 @@ const {
 const bcrypt = require("../helpers/bcrypt");
 const jwt = require("../helpers/jwt");
 const cloudinary = require("../helpers/cloudinary");
+const responseJson = require("../helpers/response");
 
 class ControllerCustomer {
     // 1.1 Auth & Profile
     static async register(req, res, next) {
         try {
             const { name, email, password, phone } = req.body;
+            if (!email || !password) {
+                throw { name: "EmailOrPasswordRequired" };
+            }
+
+            const existing = await Customer.findOne({ where: { email } });
+            if (existing) {
+                throw {
+                    name: "SequelizeUniqueConstraintError",
+                    errors: [{ message: "Email already registered" }],
+                };
+            }
             const customer = await Customer.create({
                 fullName: name,
                 email,
@@ -22,7 +34,7 @@ class ControllerCustomer {
                 phone,
                 isDeleted: false,
             });
-            res.status(201).json({ message: "Register success", customer });
+            responseJson(res, 1, customer);
         } catch (err) {
             next(err);
         }
@@ -31,6 +43,11 @@ class ControllerCustomer {
     static async login(req, res, next) {
         try {
             const { email, password } = req.body;
+
+            if (!email || !password) {
+                throw { name: "EmailOrPasswordRequired" };
+            }
+
             const customer = await Customer.findOne({
                 where: { email, isDeleted: false },
             });
@@ -38,36 +55,36 @@ class ControllerCustomer {
                 !customer ||
                 !(await bcrypt.compareHash(password, customer.password))
             ) {
-                return res.status(401).json({ message: "Invalid credentials" });
+                throw { name: "InvalidCredentials" };
             }
             const token = await jwt.generateToken({
                 id: customer.id,
                 role: "customer",
             });
-            res.json({ token });
+            responseJson(res, 0, { token });
+            // res.json({ token });
         } catch (err) {
             next(err);
         }
     }
 
     static async logout(req, res) {
-        res.json({ message: "Logout success" });
+        responseJson(res, 0, { message: "Logout success" });
     }
 
     static async refreshToken(req, res) {
-        res.json({
+        responseJson(res, 0, {
             token: jwt.generateToken({ id: req.user.id, role: "customer" }),
         });
     }
 
     static async getProfile(req, res, next) {
-        console.log("masuk");
         try {
             const profile = await Customer.findOne({
                 where: { id: req.user.id, isDeleted: false },
                 attributes: { exclude: ["password"] },
             });
-            res.json(profile);
+            responseJson(res, 0, profile);
         } catch (err) {
             next(err);
         }
@@ -75,8 +92,10 @@ class ControllerCustomer {
 
     static async updateProfile(req, res, next) {
         try {
-            await Customer.update(req.body, { where: { id: req.user.id } });
-            res.json({ message: "Profile updated" });
+            let data = await Customer.update(req.body, {
+                where: { id: req.user.id },
+            });
+            responseJson(res, 2, data);
         } catch (err) {
             next(err);
         }
@@ -85,15 +104,24 @@ class ControllerCustomer {
     static async changePassword(req, res, next) {
         try {
             const { oldPassword, newPassword } = req.body;
-            const customer = await Customer.findByPk(req.user.id);
-            if (!(await bcrypt.compareHash(oldPassword, customer.password))) {
-                return res.status(400).json({ message: "Wrong password" });
+            if (!oldPassword || !newPassword) {
+                throw {
+                    name: "ValidationError",
+                    errors: [{ message: "Old and new password are required" }],
+                };
             }
-            await Customer.update(
+
+            const customer = await Customer.findByPk(req.user.id);
+            if (!customer) throw { name: "errorNotFound" };
+            if (!(await bcrypt.compareHash(oldPassword, customer.password))) {
+                throw { name: "InvalidCredentials" };
+            }
+            let data = await Customer.update(
                 { password: await bcrypt.hashPassword(newPassword) },
                 { where: { id: req.user.id } }
             );
-            res.json({ message: "Password changed" });
+            responseJson(res, 2, data);
+            // res.json({ message: "Password changed" });
         } catch (err) {
             next(err);
         }
@@ -107,7 +135,10 @@ class ControllerCustomer {
                 { photoUrl: result.secure_url },
                 { where: { id: req.user.id } }
             );
-            res.json({ message: "Photo updated", photoUrl: result.secure_url });
+            responseJson(res, 1, {
+                message: "Photo updated",
+                photoUrl: result.secure_url,
+            });
         } catch (err) {
             next(err);
         }
@@ -125,12 +156,13 @@ class ControllerCustomer {
                     .json({ message: "Customer not found or already deleted" });
             }
 
-            await Customer.update(
+            let data = await Customer.update(
                 { isDeleted: true },
                 { where: { id: req.user.id } }
             );
 
-            res.json({ message: "Account deleted (soft delete)" });
+            responseJson(res, 3, data);
+            // res.json({ message: "Account deleted (soft delete)" });
         } catch (err) {
             next(err);
         }
@@ -146,7 +178,8 @@ class ControllerCustomer {
                 dropLocation,
                 status: "pending",
             });
-            res.status(201).json(ride);
+            responseJson(res, 1, ride);
+            // res.status(201).json(ride);
         } catch (err) {
             next(err);
         }
@@ -155,7 +188,8 @@ class ControllerCustomer {
     static async rideStatus(req, res, next) {
         try {
             const ride = await Delivery.findByPk(req.params.rideId);
-            res.json(ride);
+            responseJson(res, 0, ride);
+            // res.json(ride);
         } catch (err) {
             next(err);
         }
@@ -166,7 +200,8 @@ class ControllerCustomer {
             const rides = await Delivery.findAll({
                 where: { customerId: req.user.id },
             });
-            res.json(rides);
+            responseJson(res, 0, rides);
+            // res.json(rides);
         } catch (err) {
             next(err);
         }
@@ -174,11 +209,12 @@ class ControllerCustomer {
 
     static async cancelRide(req, res, next) {
         try {
-            await Delivery.update(
+            let data = await Delivery.update(
                 { status: "cancelled" },
                 { where: { id: req.params.rideId, customerId: req.user.id } }
             );
-            res.json({ message: "Ride cancelled" });
+            responseJson(res, 2, data);
+            // res.json({ message: "Ride cancelled" });
         } catch (err) {
             next(err);
         }
@@ -191,7 +227,8 @@ class ControllerCustomer {
                 attributes: ["category"],
                 group: ["category"],
             });
-            res.json(categories);
+            responseJson(res, 0, categories);
+            // res.json(categories);
         } catch (err) {
             next(err);
         }
@@ -200,7 +237,8 @@ class ControllerCustomer {
     static async listRestaurants(req, res, next) {
         try {
             const restaurants = await Partner.findAll();
-            res.json(restaurants);
+            responseJson(res, 0, restaurants);
+            // res.json(restaurants);
         } catch (err) {
             next(err);
         }
@@ -211,7 +249,8 @@ class ControllerCustomer {
             const restaurant = await Partner.findByPk(req.params.id, {
                 include: Menu,
             });
-            res.json(restaurant);
+            responseJson(res, 0, restaurant);
+            // res.json(restaurant);
         } catch (err) {
             next(err);
         }
@@ -228,7 +267,8 @@ class ControllerCustomer {
             for (let item of items) {
                 await order.createOrderitem(item);
             }
-            res.status(201).json(order);
+            responseJson(res, 1, order);
+            // res.status(201).json(order);
         } catch (err) {
             next(err);
         }
@@ -239,7 +279,8 @@ class ControllerCustomer {
             const order = await Order.findByPk(req.params.orderId, {
                 include: ["orderitems"],
             });
-            res.json(order);
+            responseJson(res, 0, order);
+            // res.json(order);
         } catch (err) {
             next(err);
         }
@@ -250,7 +291,8 @@ class ControllerCustomer {
             const orders = await Order.findAll({
                 where: { customerId: req.user.id },
             });
-            res.json(orders);
+            responseJson(res, 0, orders);
+            // res.json(orders);
         } catch (err) {
             next(err);
         }
@@ -258,11 +300,12 @@ class ControllerCustomer {
 
     static async cancelFoodOrder(req, res, next) {
         try {
-            await Order.update(
+            let data = await Order.update(
                 { status: "cancelled" },
                 { where: { id: req.params.orderId, customerId: req.user.id } }
             );
-            res.json({ message: "Order cancelled" });
+            responseJson(res, 2, data);
+            // res.json({ message: "Order cancelled" });
         } catch (err) {
             next(err);
         }
@@ -270,10 +313,14 @@ class ControllerCustomer {
 
     // 1.4 Payment
     static async paymentMethods(req, res) {
-        res.json([
+        responseJson(res, 0, [
             { id: 1, name: "Cash" },
             { id: 2, name: "Wallet" },
         ]);
+        // res.json([
+        //     { id: 1, name: "Cash" },
+        //     { id: 2, name: "Wallet" },
+        // ]);
     }
 
     static async topupWallet(req, res, next) {
@@ -285,7 +332,8 @@ class ControllerCustomer {
                 type: "topup",
                 status: "completed",
             });
-            res.status(201).json(payment);
+            responseJson(res, 1, payment);
+            // res.status(201).json(payment);
         } catch (err) {
             next(err);
         }
@@ -300,7 +348,8 @@ class ControllerCustomer {
                 (acc, p) => acc + (p.type === "topup" ? p.amount : -p.amount),
                 0
             );
-            res.json({ balance });
+            responseJson(res, 0, { balance });
+            // res.json({ balance });
         } catch (err) {
             next(err);
         }
@@ -311,6 +360,7 @@ class ControllerCustomer {
             const payments = await Payment.findAll({
                 where: { customerId: req.user.id },
             });
+            responseJson(res, 0, payments);
             res.json(payments);
         } catch (err) {
             next(err);

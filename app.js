@@ -6,6 +6,7 @@ const express = require("express");
 const cors = require("cors");
 const routes = require("./routes");
 const db = require("./models"); // Sequelize models/index.js
+const handleError = require("./middlewares/errorHandler");
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,6 +25,7 @@ app.get("/health", (req, res) => {
     res.status(200).send("OK");
 });
 
+app.use(handleError);
 // ✅ Cek koneksi ke DB terlebih dahulu
 db.sequelize
     .authenticate()
